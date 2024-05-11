@@ -1,4 +1,4 @@
-package dbseed
+package goseed
 
 import (
 	"database/sql"
@@ -75,12 +75,10 @@ func (*seeder) getData(data map[string][]any) map[string][]any {
 	dataInsert := map[string][]any{}
 
 	for key, value := range data {
-
 		method := value[0]
 		meth := reflect.ValueOf(faker).MethodByName(method.(string))
 
 		if meth.Kind() == reflect.Invalid {
-
 			dataInsert[key] = []any{method}
 			continue
 		}
