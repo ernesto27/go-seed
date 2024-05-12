@@ -1,19 +1,16 @@
 package goseed
 
 import (
-	"database/sql"
-	"fmt"
 	"reflect"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/brianvoe/gofakeit/v7/source"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 type seeder struct {
 	tableName string
-	db        *sql.DB
 	count     int
+	engine    myDB
 }
 
 type Options struct {
@@ -23,47 +20,42 @@ type Options struct {
 	Database string
 	User     string
 	Password string
+	File     string
 	Table    string
 }
 
 func NewSeeder(options Options) *seeder {
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", options.User, options.Password, options.Host, options.Port, options.Database))
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Ping()
-	if err != nil {
-		panic(err)
+	var engine myDB
+	if options.Engine == "mysql" {
+		engine = &Mysql{Options: options}
+		err := engine.New()
+		if err != nil {
+			panic(err)
+		}
+	} else if options.Engine == "postgres" {
+		engine = &Postgres{Options: options}
+		err := engine.New()
+		if err != nil {
+			panic(err)
+		}
+	} else if options.Engine == "sqlite" {
+		engine = &Sqlite{Options: options}
+		err := engine.New()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &seeder{
 		tableName: options.Table,
-		db:        db,
+		engine:    engine,
 	}
 }
 
 func (s *seeder) doInsert(data map[string][]any) {
 	dataInsert := s.getData(data)
 
-	query := fmt.Sprintf("INSERT INTO `%s` (", s.tableName)
-	values := "VALUES ("
-	params := []interface{}{}
-
-	for key, value := range dataInsert {
-		query += fmt.Sprintf("`%s`, ", key)
-		values += "?, "
-		params = append(params, value[0])
-	}
-
-	query = query[:len(query)-2] + ") "
-	values = values[:len(values)-2] + ");"
-
-	_, err := s.db.Exec(query+values, params...)
-	if err != nil {
-		panic(err)
-	}
-
+	err := s.engine.Query(dataInsert)
 	if err != nil {
 		panic(err)
 	}

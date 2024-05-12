@@ -11,30 +11,70 @@ $ go get github.com/ernesto27/go-seed
 ## Example
 
 ```go
-
 package main
 
-import dbseed "github.com/ernesto27/go-seed"
+import goseed "github.com/ernesto27/go-seed"
 
 func main() {
 
-	data := map[string][]any{
+	// mysql example
+	dataMysql := map[string][]any{
 		"username":      {"Name"},
 		"email":         {"Email"},
+		"full_name":     {"Name"},
+		"password_hash": {"Country"},
 	}
 
 	goseed.NewSeeder(goseed.Options{
 		Engine:   "mysql",
 		Host:     "localhost",
-		Port:     "3388",
-		Database: "mydb",
+		Port:     "3306",
+		Database: "yourdb",
 		User:     "root",
 		Password: "1111",
 		Table:    "users",
 	}).
 		WithCount(10).
-		Insert(data)
+		Insert(dataMysql)
+
+	// postgres example
+	dataPostgres := map[string][]any{
+		"name":    {"Company"},
+		"address": {"Street"},
+		"phone":   {"Phone"},
+		"website": {"DomainName"},
+		"email":   {"Email"},
+	}
+
+	goseed.NewSeeder(goseed.Options{
+		Engine:   "postgres",
+		Host:     "localhost",
+		Port:     "5433",
+		Database: "yourdb",
+		User:     "postgres",
+		Password: "1111",
+		Table:    "providers",
+	}).
+		WithCount(20).
+		Insert(dataPostgres)
+
+	// sqlite example
+	dataSqlite := map[string][]any{
+		"name":     {"FirstName"},
+		"email":    {"Email"},
+		"password": {"13456"},
+	}
+
+	goseed.NewSeeder(goseed.Options{
+		Engine: "sqlite",
+		File:   "yourdb.db",
+		Table:  "users",
+	}).
+		WithCount(10).
+		Insert(dataSqlite)
+
 }
+
 
 ```
 
