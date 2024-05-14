@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gocql/gocql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -19,8 +20,8 @@ type Mysql struct {
 	Options
 }
 
-func (m *Mysql) New() error {
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", m.User, m.Password, m.Host, m.Port, m.Database))
+func (mysql *Mysql) New() error {
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysql.User, mysql.Password, mysql.Host, mysql.Port, mysql.Database))
 	if err != nil {
 		return err
 	}
@@ -30,12 +31,20 @@ func (m *Mysql) New() error {
 		return err
 	}
 
-	m.db = db
+	mysql.db = db
 	return nil
 }
 
-func (m *Mysql) Query(data map[string][]any) error {
-	return query(data, m.Table, m.db)
+func (mysql *Mysql) Query(data map[string][]any) error {
+	defer mysql.db.Close()
+
+	query, params := getQueryParams(data, mysql.Table, "?", "`")
+	_, err := mysql.db.Exec(query, params...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type Postgres struct {
@@ -43,8 +52,8 @@ type Postgres struct {
 	Options
 }
 
-func (p *Postgres) New() error {
-	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", p.Host, p.Port, p.User, p.Password, p.Database))
+func (postgres *Postgres) New() error {
+	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", postgres.Host, postgres.Port, postgres.User, postgres.Password, postgres.Database))
 	if err != nil {
 		return err
 	}
@@ -54,27 +63,15 @@ func (p *Postgres) New() error {
 		return err
 	}
 
-	p.db = db
+	postgres.db = db
 	return nil
 }
 
-func (p *Postgres) Query(data map[string][]any) error {
-	query := fmt.Sprintf("INSERT INTO %s (", p.Table)
-	values := "VALUES ("
-	params := []interface{}{}
+func (postgres *Postgres) Query(data map[string][]any) error {
+	defer postgres.db.Close()
 
-	index := 1
-	for key, value := range data {
-		query += fmt.Sprintf("%s, ", key)
-		values += "$" + fmt.Sprint(index) + ", "
-		params = append(params, value[0])
-		index++
-	}
-
-	query = query[:len(query)-2] + ") "
-	values = values[:len(values)-2] + ");"
-
-	_, err := p.db.Exec(query+values, params...)
+	query, params := getQueryParams(data, postgres.Table, "$", "")
+	_, err := postgres.db.Exec(query, params...)
 	if err != nil {
 		return err
 	}
@@ -103,16 +100,41 @@ func (sqlite *Sqlite) New() error {
 }
 
 func (sqlite *Sqlite) Query(data map[string][]any) error {
-	return query(data, sqlite.Table, sqlite.db)
+	defer sqlite.db.Close()
+	query, params := getQueryParams(data, sqlite.Table, "?", "")
+	_, err := sqlite.db.Exec(query, params...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func query(data map[string][]any, table string, db *sql.DB) error {
-	query := fmt.Sprintf("INSERT INTO `%s` (", table)
+func getQueryParams(data map[string][]any, table string, placeholder string, delimeter string) (string, []interface{}) {
+	query := fmt.Sprintf("INSERT INTO "+delimeter+"%s"+delimeter+" (", table)
 	values := "VALUES ("
 	params := []interface{}{}
 
 	for key, value := range data {
-		query += fmt.Sprintf("`%s`, ", key)
+		query += fmt.Sprintf(delimeter+"%s"+delimeter+", ", key)
+		values += placeholder + ", "
+		params = append(params, value[0])
+	}
+
+	query = query[:len(query)-2] + ") "
+	values = values[:len(values)-2] + ");"
+
+	fmt.Println(query + values)
+
+	return query + values, params
+}
+
+func queryCassandra(data map[string][]any, table string) (string, []interface{}) {
+	query := fmt.Sprintf("INSERT INTO %s (", table)
+	values := "VALUES ("
+	params := []interface{}{}
+
+	for key, value := range data {
+		query += fmt.Sprintf("%s, ", key)
 		values += "?, "
 		params = append(params, value[0])
 	}
@@ -120,7 +142,38 @@ func query(data map[string][]any, table string, db *sql.DB) error {
 	query = query[:len(query)-2] + ") "
 	values = values[:len(values)-2] + ");"
 
-	_, err := db.Exec(query+values, params...)
+	return query + values, params
+}
+
+type Cassandra struct {
+	session *gocql.Session
+	Options
+}
+
+func (cassandra *Cassandra) New() error {
+	cluster := gocql.NewCluster(cassandra.Host)
+	cluster.Keyspace = cassandra.Database
+	cluster.Consistency = gocql.One
+
+	session, err := cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+
+	cassandra.session = session
+	return nil
+}
+
+func (cassandra *Cassandra) Query(data map[string][]any) error {
+	query, params := getQueryParams(data, cassandra.Table, "?", "")
+
+	for key, param := range params {
+		if param == "UUID" {
+			params[key] = gocql.TimeUUID()
+		}
+	}
+
+	err := cassandra.session.Query(query, params...).Exec()
 	if err != nil {
 		return err
 	}

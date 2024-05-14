@@ -26,20 +26,28 @@ type Options struct {
 
 func NewSeeder(options Options) *seeder {
 	var engine myDB
-	if options.Engine == "mysql" {
+
+	switch options.Engine {
+	case "mysql":
 		engine = &Mysql{Options: options}
 		err := engine.New()
 		if err != nil {
 			panic(err)
 		}
-	} else if options.Engine == "postgres" {
+	case "postgres":
 		engine = &Postgres{Options: options}
 		err := engine.New()
 		if err != nil {
 			panic(err)
 		}
-	} else if options.Engine == "sqlite" {
+	case "sqlite":
 		engine = &Sqlite{Options: options}
+		err := engine.New()
+		if err != nil {
+			panic(err)
+		}
+	case "cassandra":
+		engine = &Cassandra{Options: options}
 		err := engine.New()
 		if err != nil {
 			panic(err)
