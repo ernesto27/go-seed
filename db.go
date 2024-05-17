@@ -8,6 +8,7 @@ import (
 	"github.com/gocql/gocql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/sijms/go-ora/v2"
 )
 
 type myDB interface {
@@ -114,33 +115,26 @@ func getQueryParams(data map[string][]any, table string, placeholder string, del
 	values := "VALUES ("
 	params := []interface{}{}
 
+	index := 1
 	for key, value := range data {
 		query += fmt.Sprintf(delimeter+"%s"+delimeter+", ", key)
-		values += placeholder + ", "
+		pVal := placeholder
+		if placeholder == ":" {
+			pVal += fmt.Sprintf("%d", index)
+		}
+		values += pVal + ", "
 		params = append(params, value[0])
+		index++
 	}
 
 	query = query[:len(query)-2] + ") "
 	values = values[:len(values)-2] + ");"
+
+	if placeholder == ":" {
+		values = values[:len(values)-1]
+	}
 
 	fmt.Println(query + values)
-
-	return query + values, params
-}
-
-func queryCassandra(data map[string][]any, table string) (string, []interface{}) {
-	query := fmt.Sprintf("INSERT INTO %s (", table)
-	values := "VALUES ("
-	params := []interface{}{}
-
-	for key, value := range data {
-		query += fmt.Sprintf("%s, ", key)
-		values += "?, "
-		params = append(params, value[0])
-	}
-
-	query = query[:len(query)-2] + ") "
-	values = values[:len(values)-2] + ");"
 
 	return query + values, params
 }
@@ -174,6 +168,38 @@ func (cassandra *Cassandra) Query(data map[string][]any) error {
 	}
 
 	err := cassandra.session.Query(query, params...).Exec()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type Oracle struct {
+	Options
+	db *sql.DB
+}
+
+func (oracle *Oracle) New() error {
+	connStr := "oracle://" + oracle.User + ":" + oracle.Password + "@" + oracle.Host + ":" + oracle.Port + "/" + oracle.Database
+	db, err := sql.Open("oracle", connStr)
+	if err != nil {
+		return err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return err
+	}
+
+	oracle.db = db
+
+	return nil
+}
+
+func (oracle *Oracle) Query(data map[string][]any) error {
+	query, params := getQueryParams(data, oracle.Table, ":", "")
+	_, err := oracle.db.Exec(query, params...)
 	if err != nil {
 		return err
 	}

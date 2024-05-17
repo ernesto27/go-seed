@@ -52,6 +52,12 @@ func NewSeeder(options Options) *seeder {
 		if err != nil {
 			panic(err)
 		}
+	case "oracle":
+		engine = &Oracle{Options: options}
+		err := engine.New()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &seeder{

@@ -73,6 +73,20 @@ func main() {
 		WithCount(10).
 		Insert(dataSqlite)
 
+	// cassandra example 
+	goseed.NewSeeder(goseed.Options{
+		Engine:   "cassandra",
+		Host:     "127.0.0.1",
+		Database: "test",
+		Table:    "users",
+	}).
+		WithCount(5).
+		Insert(map[string][]any{
+			"id":    {"UUID"},
+			"name":  {"Name"},
+			"email": {"Email"},
+		})
+
 }
 
 
