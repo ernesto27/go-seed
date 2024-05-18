@@ -19,10 +19,10 @@ func main() {
 
 	// mysql example
 	dataMysql := map[string][]any{
-		"username":      {"Name"},
-		"email":         {"Email"},
-		"full_name":     {"Name"},
-		"password_hash": {"Country"},
+		"username":      {"gofakeit.Name"},
+		"email":         {"gofakeit.Email"},
+		"full_name":     {"gofakeit.Name"},
+		"password_hash": {"gofakeit.Country"},
 	}
 
 	goseed.NewSeeder(goseed.Options{
@@ -39,11 +39,11 @@ func main() {
 
 	// postgres example
 	dataPostgres := map[string][]any{
-		"name":    {"Company"},
-		"address": {"Street"},
-		"phone":   {"Phone"},
-		"website": {"DomainName"},
-		"email":   {"Email"},
+		"name":    {"gofakeit.Company"},
+		"address": {"gofakeit.Street"},
+		"phone":   {"gofakeit.Phone"},
+		"website": {"gofakeit.DomainName"},
+		"email":   {"gofakeit.Email"},
 	}
 
 	goseed.NewSeeder(goseed.Options{
@@ -60,8 +60,8 @@ func main() {
 
 	// sqlite example
 	dataSqlite := map[string][]any{
-		"name":     {"FirstName"},
-		"email":    {"Email"},
+		"name":     {"gofakeit.FirstName"},
+		"email":    {"gofakeit.Email"},
 		"password": {"13456"},
 	}
 
@@ -83,8 +83,8 @@ func main() {
 		WithCount(5).
 		Insert(map[string][]any{
 			"id":    {"UUID"},
-			"name":  {"Name"},
-			"email": {"Email"},
+			"name":  {"gofakeit.Name"},
+			"email": {"gofakeit.Email"},
 		})
 
 }

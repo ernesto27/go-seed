@@ -2,6 +2,7 @@ package goseed
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/brianvoe/gofakeit/v7/source"
@@ -82,6 +83,10 @@ func (*seeder) getData(data map[string][]any) map[string][]any {
 
 	for key, value := range data {
 		method := value[0]
+		if strings.Contains(method.(string), "gofakeit.") {
+			method = strings.ReplaceAll(method.(string), "gofakeit.", "")
+		}
+
 		meth := reflect.ValueOf(faker).MethodByName(method.(string))
 
 		if meth.Kind() == reflect.Invalid {
@@ -108,6 +113,8 @@ func (s *seeder) Insert(data map[string][]any) {
 	for i := 0; i < s.count; i++ {
 		s.doInsert(data)
 	}
+
+	s.engine.Close()
 }
 
 func (s *seeder) WithCount(count int) *seeder {

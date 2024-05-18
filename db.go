@@ -14,6 +14,7 @@ import (
 type myDB interface {
 	New() error
 	Query(data map[string][]any) error
+	Close()
 }
 
 type Mysql struct {
@@ -37,8 +38,6 @@ func (mysql *Mysql) New() error {
 }
 
 func (mysql *Mysql) Query(data map[string][]any) error {
-	defer mysql.db.Close()
-
 	query, params := getQueryParams(data, mysql.Table, "?", "`")
 	_, err := mysql.db.Exec(query, params...)
 	if err != nil {
@@ -46,6 +45,10 @@ func (mysql *Mysql) Query(data map[string][]any) error {
 	}
 
 	return nil
+}
+
+func (mysql *Mysql) Close() {
+	mysql.db.Close()
 }
 
 type Postgres struct {
@@ -69,8 +72,6 @@ func (postgres *Postgres) New() error {
 }
 
 func (postgres *Postgres) Query(data map[string][]any) error {
-	defer postgres.db.Close()
-
 	query, params := getQueryParams(data, postgres.Table, "$", "")
 	_, err := postgres.db.Exec(query, params...)
 	if err != nil {
@@ -78,6 +79,10 @@ func (postgres *Postgres) Query(data map[string][]any) error {
 	}
 
 	return nil
+}
+
+func (postgres *Postgres) Close() {
+	postgres.db.Close()
 }
 
 type Sqlite struct {
@@ -110,6 +115,10 @@ func (sqlite *Sqlite) Query(data map[string][]any) error {
 	return nil
 }
 
+func (sqlite *Sqlite) Close() {
+	sqlite.db.Close()
+}
+
 func getQueryParams(data map[string][]any, table string, placeholder string, delimeter string) (string, []interface{}) {
 	query := fmt.Sprintf("INSERT INTO "+delimeter+"%s"+delimeter+" (", table)
 	values := "VALUES ("
@@ -119,7 +128,7 @@ func getQueryParams(data map[string][]any, table string, placeholder string, del
 	for key, value := range data {
 		query += fmt.Sprintf(delimeter+"%s"+delimeter+", ", key)
 		pVal := placeholder
-		if placeholder == ":" {
+		if placeholder == ":" || placeholder == "$" {
 			pVal += fmt.Sprintf("%d", index)
 		}
 		values += pVal + ", "
@@ -175,6 +184,8 @@ func (cassandra *Cassandra) Query(data map[string][]any) error {
 	return nil
 }
 
+func (cassandra *Cassandra) Close() {}
+
 type Oracle struct {
 	Options
 	db *sql.DB
@@ -205,4 +216,8 @@ func (oracle *Oracle) Query(data map[string][]any) error {
 	}
 
 	return nil
+}
+
+func (oracle *Oracle) Close() {
+	oracle.db.Close()
 }
