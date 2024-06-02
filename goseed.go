@@ -1,6 +1,7 @@
 package goseed
 
 import (
+	"database/sql"
 	"reflect"
 	"strings"
 
@@ -15,14 +16,15 @@ type seeder struct {
 }
 
 type Options struct {
-	Engine   string
-	Host     string
-	Port     string
-	Database string
-	User     string
-	Password string
-	File     string
-	Table    string
+	Engine     string
+	Host       string
+	Port       string
+	Database   string
+	User       string
+	Password   string
+	File       string
+	Table      string
+	DBInstance *sql.DB
 }
 
 func NewSeeder(options Options) *seeder {

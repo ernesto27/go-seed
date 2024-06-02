@@ -57,6 +57,11 @@ type Postgres struct {
 }
 
 func (postgres *Postgres) New() error {
+	if postgres.DBInstance != nil {
+		postgres.db = postgres.DBInstance
+		return nil
+	}
+
 	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", postgres.Host, postgres.Port, postgres.User, postgres.Password, postgres.Database))
 	if err != nil {
 		return err
